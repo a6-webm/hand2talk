@@ -1,6 +1,7 @@
 use std::{
     ffi::CString,
     iter::zip,
+    ptr::null_mut,
     sync::{Arc, Mutex},
     thread::sleep,
     time::Duration,
@@ -206,7 +207,7 @@ fn main() {
             name: "PR".to_owned(),
             min: 0.000000,
             max: 20000.000000,
-            start_val: 8000.000000,
+            start_val: 0000.000000,
         },
         VTLParam {
             name: "XB".to_owned(),
@@ -265,8 +266,6 @@ fn main() {
     ];
 
     let speaker = CString::new("./res/JD3.speaker").unwrap();
-    let num_samples: usize = 220;
-    let mut audio: Vec<f64> = vec![0.0; num_samples];
     let throat_vals: (Vec<f64>, Vec<f64>) = (
         tract_params.iter().map(|p| p.start_val).collect(),
         glottis_params.iter().map(|p| p.start_val).collect(),
@@ -279,7 +278,7 @@ fn main() {
         vtlSynthesisReset();
         vtlSynthesisAddTract(
             0,
-            audio.as_mut_ptr(),
+            null_mut(),
             only_vals(&tract_params).as_mut_ptr(),
             only_vals(&glottis_params).as_mut_ptr(),
         );
@@ -287,6 +286,7 @@ fn main() {
     let mx_data = Arc::new(Mutex::new(throat_vals));
     let stream = audio_setup(mx_data.clone());
     stream.play().unwrap();
+
     for i in 0..100 {
         let mut vals = mx_data.lock().unwrap();
         println!("{i}");
@@ -294,6 +294,7 @@ fn main() {
         drop(vals);
         sleep(Duration::from_millis(20));
     }
+
     drop(stream);
     unsafe {
         vtlClose();
