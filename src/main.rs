@@ -10,9 +10,9 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     SampleFormat, SampleRate, Stream,
 };
-use hand2talk::vtl::{VTLApi, GLOTTIS_PARAMS, TRACT_PARAMS};
+use hand2talk::vtl::{GlottisIdx::*, VTLApi, VTLParams};
 
-fn audio_setup(mut vtl_api: VTLApi, mx_data: Arc<Mutex<(Vec<f64>, Vec<f64>)>>) -> Stream {
+fn audio_setup(mut vtl_api: VTLApi, mx_params: Arc<Mutex<VTLParams>>) -> Stream {
     let host = cpal::default_host();
     let device = host
         .default_output_device()
@@ -35,8 +35,9 @@ fn audio_setup(mut vtl_api: VTLApi, mx_data: Arc<Mutex<(Vec<f64>, Vec<f64>)>>) -
         .build_output_stream(
             &config,
             move |data: &mut [f32], _| {
-                let params = mx_data.lock().unwrap();
-                let audio = vtl_api.add_tract(data.len(), &params.0, &params.1);
+                let params = mx_params.lock().unwrap();
+                let audio =
+                    vtl_api.add_tract(data.len(), params.throat_state(), params.glottis_state());
                 drop(params);
                 for (d, s) in zip(data.iter_mut(), audio.iter().cloned()) {
                     *d = s as f32;
@@ -52,20 +53,17 @@ fn main() {
     let speaker = CString::new("./res/JD3.speaker").unwrap();
     let mut vtl_api = VTLApi::new(speaker).expect("failed to load speaker file");
     vtl_api.auto_calc_tr(true);
-    let throat_vals: (Vec<f64>, Vec<f64>) = (
-        TRACT_PARAMS.iter().map(|p| p.start_val).collect(),
-        GLOTTIS_PARAMS.iter().map(|p| p.start_val).collect(),
-    );
-    vtl_api.reset(&throat_vals.0, &throat_vals.1);
-    let mx_data = Arc::new(Mutex::new(throat_vals));
+    let params = VTLParams::new();
+    vtl_api.reset(params.throat_state(), params.glottis_state());
+    let mx_data = Arc::new(Mutex::new(params));
     let stream = audio_setup(vtl_api, mx_data.clone());
     stream.play().unwrap();
 
     for i in 0..100 {
-        let mut vals = mx_data.lock().unwrap();
+        let mut params = mx_data.lock().unwrap();
         println!("{i}");
-        vals.1[1] += 200.0;
-        drop(vals);
+        params.set_glottis_value(PR, i as f64 / 100.0);
+        drop(params);
         sleep(Duration::from_millis(20));
     }
 }
