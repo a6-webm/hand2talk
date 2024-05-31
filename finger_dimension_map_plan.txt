@@ -1,0 +1,13 @@
+distance from tip of finger to palm
+
+l thumb       - F0
+l index       - LD
+l middle      - AS
+l ring        - TCY
+l pinkie      - TCX
+r thumb       - AS
+r index       - TBX
+r middle      - TBY
+r ring        - TRX
+r pinkie      - TRY
+r palm height - PR
