@@ -2,15 +2,16 @@ use std::{
     ffi::CString,
     iter::zip,
     sync::{Arc, Mutex},
-    thread::sleep,
-    time::Duration,
 };
 
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     SampleFormat, SampleRate, Stream,
 };
-use hand2talk::vtl::{GlottisIdx::*, VTLApi, VTLParams};
+use hand2talk::{
+    controller::ParamController,
+    vtl::{VTLApi, VTLParams},
+};
 
 fn audio_setup(mut vtl_api: VTLApi, mx_params: Arc<Mutex<VTLParams>>) -> Stream {
     let host = cpal::default_host();
@@ -37,7 +38,7 @@ fn audio_setup(mut vtl_api: VTLApi, mx_params: Arc<Mutex<VTLParams>>) -> Stream 
             move |data: &mut [f32], _| {
                 let params = mx_params.lock().unwrap();
                 let audio =
-                    vtl_api.add_tract(data.len(), params.throat_state(), params.glottis_state());
+                    vtl_api.add_tract(data.len(), params.tract_state(), params.glottis_state());
                 drop(params);
                 for (d, s) in zip(data.iter_mut(), audio.iter().cloned()) {
                     *d = s as f32;
@@ -54,16 +55,11 @@ fn main() {
     let mut vtl_api = VTLApi::new(speaker).expect("failed to load speaker file");
     vtl_api.auto_calc_tr(true);
     let params = VTLParams::new();
-    vtl_api.reset(params.throat_state(), params.glottis_state());
+    vtl_api.reset(params.tract_state(), params.glottis_state());
     let mx_data = Arc::new(Mutex::new(params));
     let stream = audio_setup(vtl_api, mx_data.clone());
     stream.play().unwrap();
 
-    for i in 0..100 {
-        let mut params = mx_data.lock().unwrap();
-        println!("{i}");
-        params.set_glottis_value(PR, i as f64 / 100.0);
-        drop(params);
-        sleep(Duration::from_millis(20));
-    }
+    let mut controlling = ParamController::new(mx_data);
+    controlling.controller_loop();
 }

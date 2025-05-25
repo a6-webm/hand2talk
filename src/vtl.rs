@@ -75,22 +75,22 @@ impl Drop for VTLApi {
 }
 
 pub struct VTLParams {
-    throat_state: Vec<f64>,
+    tract_state: Vec<f64>,
     glottis_state: Vec<f64>,
 }
 
 impl VTLParams {
     pub fn new() -> VTLParams {
         VTLParams {
-            throat_state: TRACT_PARAMS.iter().map(|p| p.start_val).collect(),
+            tract_state: TRACT_PARAMS.iter().map(|p| p.start_val).collect(),
             glottis_state: GLOTTIS_PARAMS.iter().map(|p| p.start_val).collect(),
         }
     }
 
-    pub fn set_throat_value(&mut self, idx: TractIdx, normalised: f64) {
+    pub fn set_tract_value(&mut self, idx: TractIdx, normalised: f64) {
         let param = &TRACT_PARAMS[idx as usize];
         let val = param.min + (param.max - param.min) * normalised;
-        self.throat_state[idx as usize] = val;
+        self.tract_state[idx as usize] = val;
     }
 
     pub fn set_glottis_value(&mut self, idx: GlottisIdx, normalised: f64) {
@@ -99,8 +99,8 @@ impl VTLParams {
         self.glottis_state[idx as usize] = val;
     }
 
-    pub fn throat_state(&self) -> &[f64] {
-        &self.throat_state
+    pub fn tract_state(&self) -> &[f64] {
+        &self.tract_state
     }
 
     pub fn glottis_state(&self) -> &[f64] {
